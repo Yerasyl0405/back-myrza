@@ -33,21 +33,19 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET, "/api/orders").hasRole("ADMIN")
-                        .requestMatchers("/api/user/current").authenticated() // Добавьте эту строку
-                        .requestMatchers("/api/breads").authenticated() // Добавьте эту строку
+                        .requestMatchers("/api/user/current").authenticated()
+                        .requestMatchers("/api/breads").authenticated()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
                 .formLogin(form -> form
                         .loginProcessingUrl("/login")
                         .successHandler((request, response, authentication) -> {
-                            // ✅ Успешный логин - возвращаем JSON
                             response.setStatus(HttpServletResponse.SC_OK);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"success\": true, \"message\": \"Login successful\"}");
                         })
                         .failureHandler((request, response, exception) -> {
-                            // ❌ Ошибка логина - возвращаем JSON
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"error\": \"Login failed\", \"message\": \"Invalid credentials\"}");
@@ -57,7 +55,6 @@ public class SecurityConfig {
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessHandler((request, response, authentication) -> {
-                            // ✅ Успешный выход - возвращаем JSON
                             response.setStatus(HttpServletResponse.SC_OK);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"success\": true, \"message\": \"Logout successful\"}");
@@ -66,13 +63,11 @@ public class SecurityConfig {
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
-                            // ❌ Пользователь не аутентифицирован
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"error\": \"Not authenticated\"}");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            // ❌ Недостаточно прав
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"error\": \"Access denied\"}");
@@ -85,28 +80,17 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(
+                "https://myrza-nan.vercel.app" // твой фронт
+        ));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
 
-
-            // Получаем разрешенные origins из переменных окружения
-            String allowedOrigins = System.getenv("ALLOWED_ORIGINS");
-            if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
-                configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-            } else {
-                // По умолчанию для разработки
-                configuration.setAllowedOrigins(Arrays.asList(
-                        "https://myrza-nan.vercel.app",
-                        "http://10.76.147.253:3000"
-                ));
-            }
-
-            configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-            configuration.setAllowedHeaders(Arrays.asList("*"));
-            configuration.setAllowCredentials(true);
-
-            UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-            source.registerCorsConfiguration("/**", configuration);
-            return source;
-        }
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
