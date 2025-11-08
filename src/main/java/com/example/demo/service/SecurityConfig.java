@@ -94,7 +94,7 @@ public class SecurityConfig {
             } else {
                 // По умолчанию для разработки
                 configuration.setAllowedOrigins(Arrays.asList(
-                        "http://localhost:3000",
+                        "https://myrza-nan.vercel.app",
                         "http://10.76.147.253:3000"
                 ));
             }
