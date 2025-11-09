@@ -7,7 +7,6 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -33,7 +32,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/debug/**").permitAll()
+                        .requestMatchers("/api/db/**", "/h2-console/**").permitAll() // разрешаем доступ к DB эндпоинтам
                         .requestMatchers(HttpMethod.GET, "/api/orders").hasRole("ADMIN")
                         .requestMatchers("/api/user/current").authenticated()
                         .requestMatchers("/api/breads").authenticated()
@@ -86,13 +85,26 @@ public class SecurityConfig {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
+        authProvider.setHideUserNotFoundExceptions(false);
         return authProvider;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        // Используем NoOpPasswordEncoder для сравнения паролей в чистом виде
-        return NoOpPasswordEncoder.getInstance();
+        // NoOpPasswordEncoder для паролей в чистом виде
+        return new PasswordEncoder() {
+            @Override
+            public String encode(CharSequence rawPassword) {
+                return rawPassword.toString();
+            }
+
+            @Override
+            public boolean matches(CharSequence rawPassword, String encodedPassword) {
+                boolean result = rawPassword.toString().equals(encodedPassword);
+                System.out.println("🔐 СРАВНЕНИЕ: '" + rawPassword + "' == '" + encodedPassword + "' = " + result);
+                return result;
+            }
+        };
     }
 
     @Bean
