@@ -24,17 +24,30 @@ public class MyUserDetailService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        System.out.println("🔍 ЗАПРОС ПОЛЬЗОВАТЕЛЯ: " + username);
+        System.out.println("🔍 ЗАПРОС ПОЛЬЗОВАТЕЛЯ: '" + username + "' (длина: " + username.length() + ")");
 
+        // Пробуем оба метода
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> {
-                    System.out.println("❌ ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН: " + username);
-                    return new UsernameNotFoundException("User not found: " + username);
+                .orElseGet(() -> {
+                    System.out.println("🔄 Пробуем native query...");
+                    return userRepository.findByUsernameNative(username).orElse(null);
                 });
 
+        if (user == null) {
+            // Выводим всех пользователей для отладки
+            List<User> allUsers = userRepository.findAll();
+            System.out.println("📋 ВСЕ ПОЛЬЗОВАТЕЛИ В БАЗЕ:");
+            allUsers.forEach(u -> {
+                System.out.println("   👤 '" + u.getUsername() + "' (длина: " + u.getUsername().length() + ")");
+            });
+
+            System.out.println("❌ ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН: '" + username + "'");
+            throw new UsernameNotFoundException("User not found: '" + username + "'");
+        }
+
         System.out.println("✅ ПОЛЬЗОВАТЕЛЬ НАЙДЕН: " + user.getUsername());
-        System.out.println("🔑 ПАРОЛЬ В БАЗЕ: " + user.getPassword());
-        System.out.println("🎭 РОЛЬ: " + user.getRole());
+        System.out.println("🔑 ПАРОЛЬ В БАЗЕ: '" + user.getPassword() + "'");
+        System.out.println("🎭 РОЛЬ: '" + user.getRole() + "'");
 
         // Формируем роль с префиксом ROLE_
         String role = user.getRole().startsWith("ROLE_") ? user.getRole() : "ROLE_" + user.getRole();
@@ -46,7 +59,7 @@ public class MyUserDetailService implements UserDetailsService {
 
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
-                user.getPassword(), // пароль в чистом виде
+                user.getPassword(),
                 authorities
         );
     }
